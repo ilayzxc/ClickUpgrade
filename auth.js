@@ -46,6 +46,8 @@ async function registerUser(username, password) {
                 Value: 0,
                 ClickPower: 1,
                 AutoClicker: 0,
+                AutoClickerCost: 50,
+                ClickMultiplierCost: 100,
                 Profit: 0
             });
 
@@ -194,6 +196,8 @@ async function saveUserData(gameState) {
                 Value: Math.floor(gameState.score || 0),
                 ClickPower: gameState.clickPower || 1,
                 AutoClicker: gameState.autoClickerPower || 0,
+                AutoClickerCost: gameState.autoClickerCost || 50,
+                ClickMultiplierCost: gameState.clickMultiplierCost || 100,
                 Profit: 0
             })
             .eq('UserName', currentUser.username);
