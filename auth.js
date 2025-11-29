@@ -142,11 +142,13 @@ async function onUserLogin() {
 
 // Called when user logs out
 function onUserLogout() {
+    // Set flag to prevent save during logout
+    window.loggingOut = true;
     // Remove game save completely to start fresh with zeros
     localStorage.removeItem('clickGameSave');
     updateAuthUI();
     // Reload page to reset to guest mode
-    setTimeout(() => location.reload(), 100);
+    location.reload();
 }
 
 // Get guest data from localStorage
