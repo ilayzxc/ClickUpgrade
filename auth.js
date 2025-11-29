@@ -42,7 +42,7 @@ async function registerUser(username, password) {
             .from('Users')
             .insert({
                 UserName: username,
-                Password: password, // Store password in database
+                Password: password,
                 Value: 0,
                 ClickPower: 1,
                 AutoClicker: 0,
@@ -142,19 +142,11 @@ async function onUserLogin() {
 
 // Called when user logs out
 function onUserLogout() {
-    // Set game values to zero in localStorage
-    const zeroState = {
-        score: 0,
-        clickPower: 1,
-        autoClickerPower: 0,
-        autoClickerCost: 50,
-        clickMultiplierCost: 100
-    };
-    localStorage.setItem('clickGameSave', JSON.stringify(zeroState));
-
+    // Remove game save completely to start fresh with zeros
+    localStorage.removeItem('clickGameSave');
     updateAuthUI();
     // Reload page to reset to guest mode
-    location.reload();
+    setTimeout(() => location.reload(), 100);
 }
 
 // Get guest data from localStorage
