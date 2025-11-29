@@ -11,7 +11,6 @@ let isAuthenticated = false;
 
 // Initialize auth state
 async function initAuth() {
-    // Check if user is logged in (session stored in localStorage)
     const savedUsername = localStorage.getItem('loggedInUser');
 
     if (savedUsername) {
@@ -26,7 +25,6 @@ async function initAuth() {
 // Register new user
 async function registerUser(username, password) {
     try {
-        // Check if username already exists
         const { data: existingUser } = await supabase
             .from('Users')
             .select('UserName')
@@ -37,7 +35,6 @@ async function registerUser(username, password) {
             return { success: false, error: 'Username already exists' };
         }
 
-        // Create user in Supabase with password
         const { error } = await supabase
             .from('Users')
             .insert({
@@ -46,14 +43,11 @@ async function registerUser(username, password) {
                 Value: 0,
                 ClickPower: 1,
                 AutoClicker: 0,
-                AutoClickerCost: 50,
-                ClickMultiplierCost: 100,
                 Profit: 0
             });
 
         if (error) throw error;
 
-        // Log user in
         localStorage.setItem('loggedInUser', username);
         currentUser = { username: username };
         isAuthenticated = true;
@@ -70,7 +64,6 @@ async function registerUser(username, password) {
 // Login user
 async function loginUser(username, password) {
     try {
-        // Check if user exists and password matches
         const { data: userData, error } = await supabase
             .from('Users')
             .select('UserName, Password')
@@ -81,12 +74,10 @@ async function loginUser(username, password) {
             return { success: false, error: 'Username not found' };
         }
 
-        // Check password
         if (userData.Password !== password) {
             return { success: false, error: 'Incorrect password' };
         }
 
-        // Log user in
         localStorage.setItem('loggedInUser', username);
         currentUser = { username: username };
         isAuthenticated = true;
@@ -116,25 +107,18 @@ async function logoutUser() {
 
 // Called when user logs in
 async function onUserLogin() {
-    // Get guest data from localStorage
     const guestData = getGuestData();
-
-    // Load user data from Supabase
     const cloudData = await loadUserData();
 
-    // Migrate guest data if needed
     if (guestData && guestData.score > 0) {
         if (!cloudData || guestData.score > cloudData.Value) {
-            // Guest data is better, migrate it to cloud
             await saveUserData(guestData);
             console.log('Guest data migrated to cloud');
         } else {
-            // Cloud data is better, use it
             applyCloudData(cloudData);
             console.log('Cloud data loaded');
         }
     } else if (cloudData) {
-        // No guest data, just load cloud data
         applyCloudData(cloudData);
         console.log('Cloud data loaded');
     }
@@ -144,23 +128,17 @@ async function onUserLogin() {
 
 // Called when user logs out
 function onUserLogout() {
-    // Set flag to prevent save during logout
     window.loggingOut = true;
-    // Remove BOTH the game save AND the login session
     localStorage.removeItem('clickGameSave');
     localStorage.removeItem('loggedInUser');
     updateAuthUI();
-    // Reload page to reset to guest mode
     location.reload();
 }
 
 // Get guest data from localStorage
 function getGuestData() {
     const savedGame = localStorage.getItem('clickGameSave');
-    if (savedGame) {
-        return JSON.parse(savedGame);
-    }
-    return null;
+    return savedGame ? JSON.parse(savedGame) : null;
 }
 
 // Load user data from Supabase
@@ -174,7 +152,7 @@ async function loadUserData() {
             .eq('UserName', currentUser.username)
             .single();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        if (error && error.code !== 'PGRST116') {
             throw error;
         }
 
@@ -196,8 +174,6 @@ async function saveUserData(gameState) {
                 Value: Math.floor(gameState.score || 0),
                 ClickPower: gameState.clickPower || 1,
                 AutoClicker: gameState.autoClickerPower || 0,
-                AutoClickerCost: gameState.autoClickerCost || 50,
-                ClickMultiplierCost: gameState.clickMultiplierCost || 100,
                 Profit: 0
             })
             .eq('UserName', currentUser.username);
@@ -215,9 +191,7 @@ function getCurrentGameState() {
     return {
         score: window.score || 0,
         clickPower: window.clickPower || 1,
-        autoClickerPower: window.autoClickerPower || 0,
-        autoClickerCost: window.autoClickerBtn?.dataset.cost || 50,
-        clickMultiplierCost: window.clickMultiplierBtn?.dataset.cost || 100
+        autoClickerPower: window.autoClickerPower || 0
     };
 }
 
