@@ -142,6 +142,8 @@ async function onUserLogin() {
 
 // Called when user logs out
 function onUserLogout() {
+    // Clear the game save to reset to zero values
+    localStorage.removeItem('clickGameSave');
     updateAuthUI();
     // Reload page to reset to guest mode
     location.reload();
