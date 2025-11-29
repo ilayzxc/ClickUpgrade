@@ -105,11 +105,11 @@ function setupAuthModal() {
 
     // Login submit
     loginSubmit.addEventListener('click', async () => {
-        const email = document.getElementById('loginEmail').value;
+        const username = document.getElementById('loginUsername').value;
         const password = document.getElementById('loginPassword').value;
         const errorDiv = document.getElementById('loginError');
 
-        if (!email || !password) {
+        if (!username || !password) {
             errorDiv.textContent = 'Please fill in all fields';
             return;
         }
@@ -118,7 +118,7 @@ function setupAuthModal() {
         loginSubmit.textContent = 'Logging in...';
         errorDiv.textContent = '';
 
-        const result = await window.authModule.loginUser(email, password);
+        const result = await window.authModule.loginUser(username, password);
 
         if (result.success) {
             modal.style.display = 'none';
@@ -134,11 +134,10 @@ function setupAuthModal() {
     // Register submit
     registerSubmit.addEventListener('click', async () => {
         const username = document.getElementById('registerUsername').value;
-        const email = document.getElementById('registerEmail').value;
         const password = document.getElementById('registerPassword').value;
         const errorDiv = document.getElementById('registerError');
 
-        if (!username || !email || !password) {
+        if (!username || !password) {
             errorDiv.textContent = 'Please fill in all fields';
             return;
         }
@@ -152,7 +151,7 @@ function setupAuthModal() {
         registerSubmit.textContent = 'Creating account...';
         errorDiv.textContent = '';
 
-        const result = await window.authModule.registerUser(email, password, username);
+        const result = await window.authModule.registerUser(username, password);
 
         if (result.success) {
             modal.style.display = 'none';
@@ -197,10 +196,9 @@ function switchTab(tab) {
 
 // Clear form fields and errors
 function clearForms() {
-    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginUsername').value = '';
     document.getElementById('loginPassword').value = '';
     document.getElementById('registerUsername').value = '';
-    document.getElementById('registerEmail').value = '';
     document.getElementById('registerPassword').value = '';
     document.getElementById('loginError').textContent = '';
     document.getElementById('registerError').textContent = '';
