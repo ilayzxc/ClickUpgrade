@@ -269,6 +269,9 @@ function updateUpgradeButtons() {
 
 // Save game state
 function saveGame() {
+    // Don't save if we're logging out
+    if (window.loggingOut) return;
+
     const gameState = {
         score: score,
         clickPower: clickPower,
