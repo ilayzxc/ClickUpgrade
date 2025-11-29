@@ -144,8 +144,9 @@ async function onUserLogin() {
 function onUserLogout() {
     // Set flag to prevent save during logout
     window.loggingOut = true;
-    // Remove game save completely to start fresh with zeros
+    // Remove BOTH the game save AND the login session
     localStorage.removeItem('clickGameSave');
+    localStorage.removeItem('loggedInUser');
     updateAuthUI();
     // Reload page to reset to guest mode
     location.reload();
