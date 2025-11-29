@@ -4,7 +4,7 @@ let clickPower = 1;
 let autoClickerPower = 0;
 let autoClickerInterval;
 
-// DOM elements
+// DOM elements  
 const scoreElement = document.getElementById('score');
 const clickArea = document.getElementById('clickArea');
 const autoClickerBtn = document.getElementById('autoClicker');
@@ -18,7 +18,6 @@ function initGame() {
     updateUI();
     startAutoClicker();
 
-    // Initialize auth system
     if (window.authModule) {
         window.authModule.initAuth();
     }
@@ -26,32 +25,31 @@ function initGame() {
 
 // Set up event listeners
 function setupEventListeners() {
-    // Click area
-    clickArea.addEventListener('click', () => {
+    clickArea.addEventListener('click', (event) => {
         addScore(clickPower);
-        animateClick();
+        animateClick(event);
     });
 
-    // Auto-clicker upgrade
     autoClickerBtn.addEventListener('click', () => {
         const cost = parseInt(autoClickerBtn.dataset.cost);
         if (score >= cost) {
             score -= cost;
             autoClickerPower += parseInt(autoClickerBtn.dataset.power);
-            autoClickerBtn.dataset.cost = Math.floor(cost * 1.5);
+            // Recalculate cost based on new power
+            recalculateCosts();
             updateUpgradeButtons();
             updateUI();
             saveGame();
         }
     });
 
-    // Click multiplier upgrade
     clickMultiplierBtn.addEventListener('click', () => {
         const cost = parseInt(clickMultiplierBtn.dataset.cost);
         if (score >= cost) {
             score -= cost;
             clickPower *= parseInt(clickMultiplierBtn.dataset.multiplier);
-            clickMultiplierBtn.dataset.cost = Math.floor(cost * 3);
+            // Recalculate cost based on new power
+            recalculateCosts();
             updateUpgradeButtons();
             updateUI();
             saveGame();
@@ -70,25 +68,27 @@ function setupAuthModal() {
     const loginSubmit = document.getElementById('loginSubmit');
     const registerSubmit = document.getElementById('registerSubmit');
 
-    // Open modal for login
-    loginBtn.addEventListener('click', () => {
-        modal.style.display = 'block';
-        switchTab('login');
-    });
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            modal.style.display = 'block';
+            switchTab('login');
+        });
+    }
 
-    // Open modal for register
-    registerBtn.addEventListener('click', () => {
-        modal.style.display = 'block';
-        switchTab('register');
-    });
+    if (registerBtn) {
+        registerBtn.addEventListener('click', () => {
+            modal.style.display = 'block';
+            switchTab('register');
+        });
+    }
 
-    // Close modal
-    closeBtn.addEventListener('click', () => {
-        modal.style.display = 'none';
-        clearForms();
-    });
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            clearForms();
+        });
+    }
 
-    // Close modal when clicking outside
     window.addEventListener('click', (event) => {
         if (event.target === modal) {
             modal.style.display = 'none';
@@ -96,78 +96,80 @@ function setupAuthModal() {
         }
     });
 
-    // Tab switching
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             switchTab(btn.dataset.tab);
         });
     });
 
-    // Login submit
-    loginSubmit.addEventListener('click', async () => {
-        const username = document.getElementById('loginUsername').value;
-        const password = document.getElementById('loginPassword').value;
-        const errorDiv = document.getElementById('loginError');
+    if (loginSubmit) {
+        loginSubmit.addEventListener('click', async () => {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
 
-        if (!username || !password) {
-            errorDiv.textContent = 'Please fill in all fields';
-            return;
-        }
+            if (!username || !password) {
+                errorDiv.textContent = 'Please fill in all fields';
+                return;
+            }
 
-        loginSubmit.disabled = true;
-        loginSubmit.textContent = 'Logging in...';
-        errorDiv.textContent = '';
+            loginSubmit.disabled = true;
+            loginSubmit.textContent = 'Logging in...';
+            errorDiv.textContent = '';
 
-        const result = await window.authModule.loginUser(username, password);
+            const result = await window.authModule.loginUser(username, password);
 
-        if (result.success) {
-            modal.style.display = 'none';
-            clearForms();
-        } else {
-            errorDiv.textContent = result.error || 'Login failed';
-        }
+            if (result.success) {
+                modal.style.display = 'none';
+                clearForms();
+            } else {
+                errorDiv.textContent = result.error || 'Login failed';
+            }
 
-        loginSubmit.disabled = false;
-        loginSubmit.textContent = 'Login';
-    });
+            loginSubmit.disabled = false;
+            loginSubmit.textContent = 'Login';
+        });
+    }
 
-    // Register submit
-    registerSubmit.addEventListener('click', async () => {
-        const username = document.getElementById('registerUsername').value;
-        const password = document.getElementById('registerPassword').value;
-        const errorDiv = document.getElementById('registerError');
+    if (registerSubmit) {
+        registerSubmit.addEventListener('click', async () => {
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+            const errorDiv = document.getElementById('registerError');
 
-        if (!username || !password) {
-            errorDiv.textContent = 'Please fill in all fields';
-            return;
-        }
+            if (!username || !password) {
+                errorDiv.textContent = 'Please fill in all fields';
+                return;
+            }
 
-        if (password.length < 6) {
-            errorDiv.textContent = 'Password must be at least 6 characters';
-            return;
-        }
+            if (password.length < 6) {
+                errorDiv.textContent = 'Password must be at least 6 characters';
+                return;
+            }
 
-        registerSubmit.disabled = true;
-        registerSubmit.textContent = 'Creating account...';
-        errorDiv.textContent = '';
+            registerSubmit.disabled = true;
+            registerSubmit.textContent = 'Creating account...';
+            errorDiv.textContent = '';
 
-        const result = await window.authModule.registerUser(username, password);
+            const result = await window.authModule.registerUser(username, password);
 
-        if (result.success) {
-            modal.style.display = 'none';
-            clearForms();
-        } else {
-            errorDiv.textContent = result.error || 'Registration failed';
-        }
+            if (result.success) {
+                modal.style.display = 'none';
+                clearForms();
+            } else {
+                errorDiv.textContent = result.error || 'Registration failed';
+            }
 
-        registerSubmit.disabled = false;
-        registerSubmit.textContent = 'Register';
-    });
+            registerSubmit.disabled = false;
+            registerSubmit.textContent = 'Register';
+        });
+    }
 
-    // Logout
-    logoutBtn.addEventListener('click', async () => {
-        await window.authModule.logoutUser();
-    });
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            await window.authModule.logoutUser();
+        });
+    }
 }
 
 // Switch between login and register tabs
@@ -196,12 +198,19 @@ function switchTab(tab) {
 
 // Clear form fields and errors
 function clearForms() {
-    document.getElementById('loginUsername').value = '';
-    document.getElementById('loginPassword').value = '';
-    document.getElementById('registerUsername').value = '';
-    document.getElementById('registerPassword').value = '';
-    document.getElementById('loginError').textContent = '';
-    document.getElementById('registerError').textContent = '';
+    const loginUser = document.getElementById('loginUsername');
+    const loginPass = document.getElementById('loginPassword');
+    const regUser = document.getElementById('registerUsername');
+    const regPass = document.getElementById('registerPassword');
+    const loginErr = document.getElementById('loginError');
+    const regErr = document.getElementById('registerError');
+
+    if (loginUser) loginUser.value = '';
+    if (loginPass) loginPass.value = '';
+    if (regUser) regUser.value = '';
+    if (regPass) regPass.value = '';
+    if (loginErr) loginErr.textContent = '';
+    if (regErr) regErr.textContent = '';
 }
 
 // Add score with animation
@@ -210,7 +219,6 @@ function addScore(amount) {
     updateUI();
     saveGame();
 
-    // Show floating text
     const floatingText = document.createElement('div');
     floatingText.className = 'floating-text';
     floatingText.textContent = `+${amount}`;
@@ -218,21 +226,20 @@ function addScore(amount) {
     floatingText.style.top = '40%';
     document.querySelector('.game-container').appendChild(floatingText);
 
-    // Remove floating text after animation
     setTimeout(() => {
         floatingText.remove();
     }, 1000);
 }
 
 // Animate click effect
-function animateClick() {
+function animateClick(event) {
+    if (!event) return;
     const clickEffect = document.createElement('div');
     clickEffect.className = 'click-effect';
     clickEffect.style.left = `${event.clientX - clickArea.getBoundingClientRect().left}px`;
     clickEffect.style.top = `${event.clientY - clickArea.getBoundingClientRect().top}px`;
     clickArea.appendChild(clickEffect);
 
-    // Remove effect after animation
     setTimeout(() => {
         clickEffect.remove();
     }, 500);
@@ -258,62 +265,75 @@ function updateUI() {
 
 // Update upgrade buttons state
 function updateUpgradeButtons() {
-    // Auto-clicker button
     autoClickerBtn.textContent = `Auto-Clicker (${autoClickerPower}/click/sec) - ${autoClickerBtn.dataset.cost} points`;
-    autoClickerBtn.disabled = score < autoClickerBtn.dataset.cost;
+    autoClickerBtn.disabled = score < parseInt(autoClickerBtn.dataset.cost);
 
-    // Click multiplier button
     clickMultiplierBtn.textContent = `Click Power x${clickPower * 2} - ${clickMultiplierBtn.dataset.cost} points`;
-    clickMultiplierBtn.disabled = score < clickMultiplierBtn.dataset.cost;
+    clickMultiplierBtn.disabled = score < parseInt(clickMultiplierBtn.dataset.cost);
 }
 
 // Save game state
 function saveGame() {
-    // Don't save if we're logging out
     if (window.loggingOut) return;
 
     const gameState = {
         score: score,
         clickPower: clickPower,
-        autoClickerPower: autoClickerPower,
-        autoClickerCost: autoClickerBtn.dataset.cost,
-        clickMultiplierCost: clickMultiplierBtn.dataset.cost
+        autoClickerPower: autoClickerPower
     };
 
-    // Save to localStorage (for guests)
     localStorage.setItem('clickGameSave', JSON.stringify(gameState));
 
-    // Save to Supabase if authenticated
     if (window.authModule && window.authModule.isAuthenticated()) {
         window.authModule.saveUserData(gameState);
     }
 }
 
-// Load game state from localStorage or Supabase
+// Load game state from localStorage
 function loadGame() {
     const savedGame = localStorage.getItem('clickGameSave');
 
-    // Initialize with zeros if no save exists (guest mode)
     if (!savedGame) {
         score = 0;
         clickPower = 1;
         autoClickerPower = 0;
+        recalculateCosts();
         return;
     }
 
-    // Load from localStorage (guest mode or while waiting for auth)
     const gameState = JSON.parse(savedGame);
     score = gameState.score || 0;
     clickPower = gameState.clickPower || 1;
     autoClickerPower = gameState.autoClickerPower || 0;
 
-    if (gameState.autoClickerCost) {
-        autoClickerBtn.dataset.cost = gameState.autoClickerCost;
+    recalculateCosts();
+}
+
+// Recalculate upgrade costs based on current power levels
+function recalculateCosts() {
+    // Auto-clicker: each purchase adds 1 power. Base cost 50, multiplier 1.5
+    // Purchases = current power (since each adds 1)
+    let autoClickerPurchases = autoClickerPower;
+    let autoClickerCost = 50;
+    for (let i = 0; i < autoClickerPurchases; i++) {
+        autoClickerCost = Math.floor(autoClickerCost * 1.5);
+    }
+    autoClickerBtn.dataset.cost = autoClickerCost;
+
+    // Click multiplier: each purchase doubles power (1 -> 2 -> 4 -> 8). Base cost 100, multiplier 3
+    // Purchases = log2(clickPower)
+    let clickMultiplierPurchases = 0;
+    let tempPower = 1;
+    while (tempPower < clickPower) {
+        tempPower *= 2;
+        clickMultiplierPurchases++;
     }
 
-    if (gameState.clickMultiplierCost) {
-        clickMultiplierBtn.dataset.cost = gameState.clickMultiplierCost;
+    let clickMultiplierCost = 100;
+    for (let i = 0; i < clickMultiplierPurchases; i++) {
+        clickMultiplierCost = Math.floor(clickMultiplierCost * 3);
     }
+    clickMultiplierBtn.dataset.cost = clickMultiplierCost;
 }
 
 // Load cloud data (called from auth.js when user logs in)
@@ -324,24 +344,16 @@ window.loadCloudData = function (data) {
     clickPower = data.ClickPower || 1;
     autoClickerPower = data.AutoClicker || 0;
 
-    // Load upgrade costs
-    if (data.AutoClickerCost) {
-        autoClickerBtn.dataset.cost = data.AutoClickerCost;
-    }
-    if (data.ClickMultiplierCost) {
-        clickMultiplierBtn.dataset.cost = data.ClickMultiplierCost;
-    }
+    recalculateCosts();
 
     updateUI();
-    saveGame(); // Save to localStorage as well
+    saveGame();
 };
 
 // Export game state getters for auth module
 window.score = score;
 window.clickPower = clickPower;
 window.autoClickerPower = autoClickerPower;
-window.autoClickerBtn = autoClickerBtn;
-window.clickMultiplierBtn = clickMultiplierBtn;
 
 // Add CSS for animations
 const style = document.createElement('style');
