@@ -37,8 +37,11 @@ async function initAuth() {
 }
 
 // Register new user
-async function registerUser(email, password, username) {
+async function registerUser(username, password) {
     try {
+        // Auto-generate email from username
+        const email = `${username.toLowerCase().replace(/\s+/g, '')}@clickgame.local`;
+
         // Sign up with Supabase Auth
         const { data, error } = await supabase.auth.signUp({
             email: email,
@@ -61,8 +64,11 @@ async function registerUser(email, password, username) {
 }
 
 // Login user
-async function loginUser(email, password) {
+async function loginUser(username, password) {
     try {
+        // Auto-generate email from username
+        const email = `${username.toLowerCase().replace(/\s+/g, '')}@clickgame.local`;
+
         const { data, error } = await supabase.auth.signInWithPassword({
             email: email,
             password: password
