@@ -14,8 +14,14 @@ const clickMultiplierBtn = document.getElementById('clickMultiplier');
 function initGame() {
     loadGame();
     setupEventListeners();
+    setupAuthModal();
     updateUI();
     startAutoClicker();
+
+    // Initialize auth system
+    if (window.authModule) {
+        window.authModule.initAuth();
+    }
 }
 
 // Set up event listeners
@@ -53,12 +59,159 @@ function setupEventListeners() {
     });
 }
 
+// Set up authentication modal
+function setupAuthModal() {
+    const modal = document.getElementById('authModal');
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    const closeBtn = document.querySelector('.close');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const loginSubmit = document.getElementById('loginSubmit');
+    const registerSubmit = document.getElementById('registerSubmit');
+
+    // Open modal for login
+    loginBtn.addEventListener('click', () => {
+        modal.style.display = 'block';
+        switchTab('login');
+    });
+
+    // Open modal for register
+    registerBtn.addEventListener('click', () => {
+        modal.style.display = 'block';
+        switchTab('register');
+    });
+
+    // Close modal
+    closeBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        clearForms();
+    });
+
+    // Close modal when clicking outside
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+            clearForms();
+        }
+    });
+
+    // Tab switching
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchTab(btn.dataset.tab);
+        });
+    });
+
+    // Login submit
+    loginSubmit.addEventListener('click', async () => {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const errorDiv = document.getElementById('loginError');
+
+        if (!email || !password) {
+            errorDiv.textContent = 'Please fill in all fields';
+            return;
+        }
+
+        loginSubmit.disabled = true;
+        loginSubmit.textContent = 'Logging in...';
+        errorDiv.textContent = '';
+
+        const result = await window.authModule.loginUser(email, password);
+
+        if (result.success) {
+            modal.style.display = 'none';
+            clearForms();
+        } else {
+            errorDiv.textContent = result.error || 'Login failed';
+        }
+
+        loginSubmit.disabled = false;
+        loginSubmit.textContent = 'Login';
+    });
+
+    // Register submit
+    registerSubmit.addEventListener('click', async () => {
+        const username = document.getElementById('registerUsername').value;
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
+        const errorDiv = document.getElementById('registerError');
+
+        if (!username || !email || !password) {
+            errorDiv.textContent = 'Please fill in all fields';
+            return;
+        }
+
+        if (password.length < 6) {
+            errorDiv.textContent = 'Password must be at least 6 characters';
+            return;
+        }
+
+        registerSubmit.disabled = true;
+        registerSubmit.textContent = 'Creating account...';
+        errorDiv.textContent = '';
+
+        const result = await window.authModule.registerUser(email, password, username);
+
+        if (result.success) {
+            modal.style.display = 'none';
+            clearForms();
+        } else {
+            errorDiv.textContent = result.error || 'Registration failed';
+        }
+
+        registerSubmit.disabled = false;
+        registerSubmit.textContent = 'Register';
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', async () => {
+        await window.authModule.logoutUser();
+    });
+}
+
+// Switch between login and register tabs
+function switchTab(tab) {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const forms = document.querySelectorAll('.auth-form');
+
+    tabBtns.forEach(btn => {
+        if (btn.dataset.tab === tab) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    forms.forEach(form => {
+        if (form.id === tab + 'Form') {
+            form.classList.add('active');
+        } else {
+            form.classList.remove('active');
+        }
+    });
+
+    clearForms();
+}
+
+// Clear form fields and errors
+function clearForms() {
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('registerUsername').value = '';
+    document.getElementById('registerEmail').value = '';
+    document.getElementById('registerPassword').value = '';
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('registerError').textContent = '';
+}
+
 // Add score with animation
 function addScore(amount) {
     score += amount;
     updateUI();
     saveGame();
-    
+
     // Show floating text
     const floatingText = document.createElement('div');
     floatingText.className = 'floating-text';
@@ -66,7 +219,7 @@ function addScore(amount) {
     floatingText.style.left = `${Math.random() * 80 + 10}%`;
     floatingText.style.top = '40%';
     document.querySelector('.game-container').appendChild(floatingText);
-    
+
     // Remove floating text after animation
     setTimeout(() => {
         floatingText.remove();
@@ -80,7 +233,7 @@ function animateClick() {
     clickEffect.style.left = `${event.clientX - clickArea.getBoundingClientRect().left}px`;
     clickEffect.style.top = `${event.clientY - clickArea.getBoundingClientRect().top}px`;
     clickArea.appendChild(clickEffect);
-    
+
     // Remove effect after animation
     setTimeout(() => {
         clickEffect.remove();
@@ -90,7 +243,7 @@ function animateClick() {
 // Start auto-clicker
 function startAutoClicker() {
     if (autoClickerInterval) clearInterval(autoClickerInterval);
-    
+
     autoClickerInterval = setInterval(() => {
         if (autoClickerPower > 0) {
             addScore(autoClickerPower);
@@ -110,13 +263,13 @@ function updateUpgradeButtons() {
     // Auto-clicker button
     autoClickerBtn.textContent = `Auto-Clicker (${autoClickerPower}/click/sec) - ${autoClickerBtn.dataset.cost} points`;
     autoClickerBtn.disabled = score < autoClickerBtn.dataset.cost;
-    
+
     // Click multiplier button
     clickMultiplierBtn.textContent = `Click Power x${clickPower * 2} - ${clickMultiplierBtn.dataset.cost} points`;
     clickMultiplierBtn.disabled = score < clickMultiplierBtn.dataset.cost;
 }
 
-// Save game state to localStorage
+// Save game state
 function saveGame() {
     const gameState = {
         score: score,
@@ -125,27 +278,61 @@ function saveGame() {
         autoClickerCost: autoClickerBtn.dataset.cost,
         clickMultiplierCost: clickMultiplierBtn.dataset.cost
     };
-    localStorage.setItem('clickGameSave', JSON.stringify(gameState));
-}
 
-// Load game state from localStorage
-function loadGame() {
-    const savedGame = localStorage.getItem('clickGameSave');
-    if (savedGame) {
-        const gameState = JSON.parse(savedGame);
-        score = gameState.score || 0;
-        clickPower = gameState.clickPower || 1;
-        autoClickerPower = gameState.autoClickerPower || 0;
-        
-        if (gameState.autoClickerCost) {
-            autoClickerBtn.dataset.cost = gameState.autoClickerCost;
-        }
-        
-        if (gameState.clickMultiplierCost) {
-            clickMultiplierBtn.dataset.cost = gameState.clickMultiplierCost;
-        }
+    // Save to localStorage (for guests)
+    localStorage.setItem('clickGameSave', JSON.stringify(gameState));
+
+    // Save to Supabase if authenticated
+    if (window.authModule && window.authModule.isAuthenticated()) {
+        window.authModule.saveUserData(gameState);
     }
 }
+
+// Load game state from localStorage or Supabase
+function loadGame() {
+    const savedGame = localStorage.getItem('clickGameSave');
+
+    // Initialize with zeros if no save exists (guest mode)
+    if (!savedGame) {
+        score = 0;
+        clickPower = 1;
+        autoClickerPower = 0;
+        return;
+    }
+
+    // Load from localStorage (guest mode or while waiting for auth)
+    const gameState = JSON.parse(savedGame);
+    score = gameState.score || 0;
+    clickPower = gameState.clickPower || 1;
+    autoClickerPower = gameState.autoClickerPower || 0;
+
+    if (gameState.autoClickerCost) {
+        autoClickerBtn.dataset.cost = gameState.autoClickerCost;
+    }
+
+    if (gameState.clickMultiplierCost) {
+        clickMultiplierBtn.dataset.cost = gameState.clickMultiplierCost;
+    }
+}
+
+// Load cloud data (called from auth.js when user logs in)
+window.loadCloudData = function (data) {
+    if (!data) return;
+
+    score = data.Value || 0;
+    clickPower = data.ClickPower || 1;
+    autoClickerPower = data.AutoClicker || 0;
+
+    updateUI();
+    saveGame(); // Save to localStorage as well
+};
+
+// Export game state getters for auth module
+window.score = score;
+window.clickPower = clickPower;
+window.autoClickerPower = autoClickerPower;
+window.autoClickerBtn = autoClickerBtn;
+window.clickMultiplierBtn = clickMultiplierBtn;
 
 // Add CSS for animations
 const style = document.createElement('style');
