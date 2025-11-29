@@ -324,6 +324,14 @@ window.loadCloudData = function (data) {
     clickPower = data.ClickPower || 1;
     autoClickerPower = data.AutoClicker || 0;
 
+    // Load upgrade costs
+    if (data.AutoClickerCost) {
+        autoClickerBtn.dataset.cost = data.AutoClickerCost;
+    }
+    if (data.ClickMultiplierCost) {
+        clickMultiplierBtn.dataset.cost = data.ClickMultiplierCost;
+    }
+
     updateUI();
     saveGame(); // Save to localStorage as well
 };
