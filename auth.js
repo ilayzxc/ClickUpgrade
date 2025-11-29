@@ -11,27 +11,14 @@ let isAuthenticated = false;
 
 // Initialize auth state
 async function initAuth() {
-    // Get current session
-    const { data: { session } } = await supabase.auth.getSession();
+    // Check if user is logged in (session stored in localStorage)
+    const savedUsername = localStorage.getItem('loggedInUser');
 
-    if (session) {
-        currentUser = session.user;
+    if (savedUsername) {
+        currentUser = { username: savedUsername };
         isAuthenticated = true;
         await onUserLogin();
     }
-
-    // Listen to auth changes
-    supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN') {
-            currentUser = session.user;
-            isAuthenticated = true;
-            await onUserLogin();
-        } else if (event === 'SIGNED_OUT') {
-            currentUser = null;
-            isAuthenticated = false;
-            onUserLogout();
-        }
-    });
 
     updateAuthUI();
 }
@@ -39,24 +26,39 @@ async function initAuth() {
 // Register new user
 async function registerUser(username, password) {
     try {
-        // Auto-generate email from username
-        const email = `${username.toLowerCase().replace(/\s+/g, '')}@clickgame.local`;
+        // Check if username already exists
+        const { data: existingUser } = await supabase
+            .from('Users')
+            .select('UserName')
+            .eq('UserName', username)
+            .single();
 
-        // Sign up with Supabase Auth
-        const { data, error } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: {
-                data: {
-                    username: username
-                }
-            }
-        });
+        if (existingUser) {
+            return { success: false, error: 'Username already exists' };
+        }
+
+        // Create user in Supabase with password
+        const { error } = await supabase
+            .from('Users')
+            .insert({
+                UserName: username,
+                Password: password, // Store password in database
+                Value: 0,
+                ClickPower: 1,
+                AutoClicker: 0,
+                Profit: 0
+            });
 
         if (error) throw error;
 
-        // User is automatically signed in after registration
-        return { success: true, user: data.user };
+        // Log user in
+        localStorage.setItem('loggedInUser', username);
+        currentUser = { username: username };
+        isAuthenticated = true;
+
+        await onUserLogin();
+
+        return { success: true, user: currentUser };
     } catch (error) {
         console.error('Registration error:', error);
         return { success: false, error: error.message };
@@ -66,17 +68,30 @@ async function registerUser(username, password) {
 // Login user
 async function loginUser(username, password) {
     try {
-        // Auto-generate email from username
-        const email = `${username.toLowerCase().replace(/\s+/g, '')}@clickgame.local`;
+        // Check if user exists and password matches
+        const { data: userData, error } = await supabase
+            .from('Users')
+            .select('UserName, Password')
+            .eq('UserName', username)
+            .single();
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password
-        });
+        if (error || !userData) {
+            return { success: false, error: 'Username not found' };
+        }
 
-        if (error) throw error;
+        // Check password
+        if (userData.Password !== password) {
+            return { success: false, error: 'Incorrect password' };
+        }
 
-        return { success: true, user: data.user };
+        // Log user in
+        localStorage.setItem('loggedInUser', username);
+        currentUser = { username: username };
+        isAuthenticated = true;
+
+        await onUserLogin();
+
+        return { success: true, user: currentUser };
     } catch (error) {
         console.error('Login error:', error);
         return { success: false, error: error.message };
@@ -86,8 +101,10 @@ async function loginUser(username, password) {
 // Logout user
 async function logoutUser() {
     try {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
+        localStorage.removeItem('loggedInUser');
+        currentUser = null;
+        isAuthenticated = false;
+        onUserLogout();
         return { success: true };
     } catch (error) {
         console.error('Logout error:', error);
@@ -118,9 +135,6 @@ async function onUserLogin() {
         // No guest data, just load cloud data
         applyCloudData(cloudData);
         console.log('Cloud data loaded');
-    } else {
-        // New user, save initial state
-        await saveUserData(getCurrentGameState());
     }
 
     updateAuthUI();
@@ -150,7 +164,7 @@ async function loadUserData() {
         const { data, error } = await supabase
             .from('Users')
             .select('*')
-            .eq('user_id', currentUser.id)
+            .eq('UserName', currentUser.username)
             .single();
 
         if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
@@ -169,20 +183,15 @@ async function saveUserData(gameState) {
     if (!currentUser) return;
 
     try {
-        const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
-
-        const userData = {
-            user_id: currentUser.id,
-            UserName: username,
-            Value: Math.floor(gameState.score || 0),
-            ClickPower: gameState.clickPower || 1,
-            AutoClicker: gameState.autoClickerPower || 0,
-            Profit: 0 // AdSense profit, to be implemented later
-        };
-
         const { error } = await supabase
             .from('Users')
-            .upsert(userData, { onConflict: 'user_id' });
+            .update({
+                Value: Math.floor(gameState.score || 0),
+                ClickPower: gameState.clickPower || 1,
+                AutoClicker: gameState.autoClickerPower || 0,
+                Profit: 0
+            })
+            .eq('UserName', currentUser.username);
 
         if (error) throw error;
 
@@ -217,10 +226,9 @@ function updateAuthUI() {
     const usernameDisplay = document.getElementById('usernameDisplay');
 
     if (isAuthenticated && currentUser) {
-        const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
         authButtons.style.display = 'none';
         userDisplay.style.display = 'block';
-        usernameDisplay.textContent = username;
+        usernameDisplay.textContent = currentUser.username;
     } else {
         authButtons.style.display = 'flex';
         userDisplay.style.display = 'none';
